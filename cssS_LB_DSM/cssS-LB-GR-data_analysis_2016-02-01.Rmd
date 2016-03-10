@@ -1,0 +1,145 @@
+---
+title: GC analysis - template
+author: "Kenyon"
+date: "February 1 2016"
+output: html_document
+---
+
+
+#### GR analysis of CssS-7 set strains in LB
+
+Import files:
+
+```{r echo=FALSE}
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/GrowthRateScripts_Dec2015/1_import_csvs.R')
+
+folder_name<-"C:/Users/Kenyon/Documents/Bacillus_subtilis/Growth Rates/Eon data/DSM-LB-2rowseach+cssS/"
+file_names<-list.files(folder_name,pattern="*[1-9].csv") #Fill me in
+media<-"LB"  #fill me in
+today<-"2016-02-01"
+
+obj_name<-"csvob"
+
+file_names
+
+```
+
+Merge individual '.csv' files into one:
+```{r echo=FALSE}
+for (i in 1:length(file_names)){
+  x<-read.csv(paste0(folder_name,file_names[i]),header = FALSE)
+  assign(paste0(obj_name,i),x)
+}
+
+#Check to make sure length of this is correct:
+csvob<-rbind(csvob1,csvob2[-1,],csvob3[-1,],csvob4[-1,],csvob5[-1,],csvob6[-1,],csvob7[-1,])
+
+#csvob[,2]<-c("media",rep(media,times=nrow(csvob)-1))
+
+#account for OD saturation:
+
+nums<-csvob[-1,-1:-4]
+
+csvob2<-(0.622*nums*nums)+(0.77*nums)
+
+csvob3<-rbind(csvob[1,-1:-4],csvob2)
+csvob<-cbind(csvob[,1:4],csvob3)
+
+#media column already included
+
+write.csv(csvob,paste0(folder_name,media,"_rawdatacollected_",today,".csv"))
+
+#grab LB or DSM rows only (depending on name of "media" object)
+
+csvob<-csvob[c(1,which(csvob[,2]==media)),]
+
+```
+
+* open grofit function, no overlay of plots so bad plots can be identified
+
+
+```{r eval=FALSE}
+
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/no_overlay-gc_combined/grofit-combined-no_overlay.R')
+
+par(mfrow=c(1,1))
+gcdat<-gcfall_no(csvob)   #already run, do not need to do again
+
+```
+
+
+* all data to date processed fine, except that some curves have much flatter peaks while others are pointy
+
+####observations: 
+
+
+####data to remove: MN Oct-9 and Oct9 CN sample failed to grow, remove from set
+
+
+```{r}
+csvob[which(csvob[,70]<0.2),1:4]
+csvob<-csvob[-which(csvob[,70]<0.2),]
+```
+
+
+using version of 'gcfall' that merges ln=TRUE and ln=FALSE datasets
+```{r results='hide',message=FALSE,width=120,warning=FALSE}
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/GrowthRateScripts_Dec2015/3_gcfall-media-lnmerge.R')
+
+gcdat2<-gcfall_mergeln(csvob)
+```
+
+**observations:**
+ * MN plots at bottom of group of curves
+ * CM also seems to segregate from rest in lytic phase
+ * in general, seems like lytic phase split into 2 groups - perhaps due to batch of media?
+
+
+#### save data and combine technical replicates
+```{r echo=FALSE, width=120}
+write.csv(gcdat2,paste0(folder_name,media,"-gcfit-",today,".csv"))
+
+# Combine technical replicates
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/average_triples_ingcobj.R')
+
+gcavg<-avg_triples(gcdat2,"DEF")
+
+write.csv(gcavg,paste0(folder_name,media,"-gcfit-repsavgd",today,".csv"))
+
+```
+
+
+### plot of GR paramaters
+
+```{r warning=FALSE,fig.width=11,fig.height=9}
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/gcf-tplot-by-strain.R')
+errort.bars(gcavg)
+
+```
+
+
+**ln_mu.spline:**
+nothing statistically sig dif
+
+**lambda.spline:**
+all strains have significantly longer lag than AM373
+
+**A.spline:**
+CssS sig higher than all other strains  
+MN sig lower than all other strains
+
+
+    
+```{r width=120}
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/gcftukeyrun_rM.R')
+
+tuk_dat<-tukeyrun(gcavg,c(11,13:15))
+
+tuk_dat[,3:5]<-signif(tuk_dat[,3:5],digits = 3)
+
+print(tuk_dat[which(tuk_dat$pvals<0.05),])
+print(tuk_dat)
+```
+
+
+
