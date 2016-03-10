@@ -1,0 +1,137 @@
+---
+title: "LB-TritonX GR analysis"
+author: "Kenyon"
+date: "December 22, 2015"
+output: html_document
+---
+
+
+#### Grew 7 strains on LB+0.008% Triton X for 16hrs in plate reader, generating 7 replicates
+
+Import files:
+
+```{r eval=FALSE}
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/GrowthRateScripts_Dec2015/1_import_csvs.R')
+
+folder_name<-"C:/Users/Kenyon/Documents/Bacillus_subtilis/Growth Rates/Eon data/LB+Triton-X/"
+file_names<-list.files(folder_name,pattern="*tritonx...csv")
+obj_name<-"tritX"
+
+file_names
+
+```
+
+Merge individual '.csv' files into one:
+```{r}
+for (i in 1:length(file_names)){
+  x<-read.csv(paste0(folder_name,file_names[i]),header = FALSE)
+  assign(paste0(obj_name,i),x)
+}
+
+tritX<-rbind(tritX1,tritX2[-1,],tritX3[-1,],tritX4[-1,],tritX5[-1,],tritX6[-1,],tritX7[-1,])
+
+tritX[,2]<-c("media",rep("LB+Trit",times=nrow(tritX)-1))
+
+write.csv(tritX,"C:/Users/Kenyon/Documents/Bacillus_subtilis/Growth Rates/Eon data/LB+Triton-X/CMN-TritonXLB-2015-12-21.csv")
+
+```
+
+* open grofit function, no overlay of plots so bad plots can be identified
+
+* in ln set, get 2 curves that are mis-identified at hr0; remove columns 5:15 (0.16-1.83hrs)
+
+```{r eval=FALSE,width=120}
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/no_overlay-gc_combined/grofit-combined-no_overlay.R')
+
+tridat<-gcfall_no(tritX)   #already run, do not need to do again
+
+```
+
+
+* all data to date processed fine, except that some curves have much flatter peaks while others are pointy
+
+####observations:
+* MN and AM373 generally had flat peaks, others were pointy
+
+* the max point in flat peaks was usually identified at later timepoints in flat region
+
+* appears as though CssS-containing strains lyse much faster than other strains
+
+####data to remove:
+* one MN growth curve appears much later than others; likely innoculation error
+   + Dec-16, well D3
+   
+* several curves have expon. growth mis-identified in first 2hrs unless those timepoints ommitted (0.16-1.86hrs: data columns 5:15)
+
+```{r}
+tritX<-tritX[,-5:-15]
+tritX<-tritX[-which(tritX[,1]=="Dec-16"& tritX[,4]=="D3"),]
+
+```
+
+
+using version of 'gcfall' that merges ln=TRUE and ln=FALSE datasets
+```{r results='hide',message=FALSE,width=120,warning=FALSE}
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/GrowthRateScripts_Dec2015/3_gcfall-media-lnmerge.R')
+
+tridat2<-gcfall_mergeln(tritX)
+```
+
+**observations:**
+
+* non-CssS strains appear to decline into lysis less quicky (but not assayed as far into that region of growth)
+
+* the max point in flat peaks was usually identified at later timepoints in flat region
+
+* CssS strains appeared to enter exponential phase sooner, AM373 last (less/more lag)
+
+
+#### save data and combine technical replicates:
+```{r width=120}
+write.csv(tridat2,"C:/Users/Kenyon/Documents/Bacillus_subtilis/Growth Rates/Eon data/LB+Triton-X/CMN-TritonXLB-gcfit-2015-12-22.csv")
+
+# Combine technical replicates
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/average_triples_ingcobj.R')
+
+trit<-avg_triples(tridat2,"DEF")
+
+write.csv(trit,"C:/Users/Kenyon/Documents/Bacillus_subtilis/Growth Rates/Eon data/LB+Triton-X/CMN-TritonXLB-gcfit-repsavgd-2015-12-21.csv")
+
+```
+
+
+### plot of GR paramaters
+
+```{r warning=FALSE,fig.width=11,fig.height=9}
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/gcf-tplot-by-strain.R')
+errort.bars(trit)
+
+```
+
+
+
+**ln_mu.spline:**
+
+    * CM is only stat dif from AM373 (8% higher); is also seg. from N+MN
+    * MN is lowest, seg from all but McpA/NhaK - may still be epistatic though
+    * MN looks like it has reduced growth compared to what is attributable to M/N
+    * CM looks like it might have higher GR compared to C/M
+
+**lambda.spline:**
+
+    * all CssS mutants look like they have similarly reduced (6-10%) lag, while A,M,N,MN are
+    * largely or only minorly different;  TukeyHSD completely backs this clustering
+    
+```{r width=120}
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/gcftukeyrun_rM.R')
+
+tri_tuk<-tukeyrun(trit,c(11,13:15))
+
+tri_tuk[,3:5]<-signif(tri_tuk[,3:5],digits = 3)
+
+print(tri_tuk[which(tri_tuk$pvals<0.05),])
+print(tri_tuk)
+```
+
+
+

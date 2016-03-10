@@ -1,0 +1,136 @@
+---
+title: GC analysis - template
+author: "Kenyon"
+date: "December 22, 2015"
+output: html_document
+---
+
+
+#### CssS-7 strain set grown on LB adjusted to pH5 for 20 hours;  7 replicates grown
+
+* Import files
+
+```{r echo=FALSE}
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/GrowthRateScripts_Dec2015/1_import_csvs.R')
+
+folder_name<-"C:/Users/Kenyon/Documents/Bacillus_subtilis/Growth Rates/Eon data/LB+HCL-PH5/" 
+file_names<-list.files(folder_name,pattern="*csv") #Fill me in
+file_names<-file_names[grep("20hrs",file_names)]
+media<-"LB_pH5"  #fill me in
+today<-"2016-02-10"
+
+obj_name<-"csvob"
+
+file_names
+
+```
+
+* Merge individual '.csv' files into one:
+
+```{r echo=FALSE}
+for (i in 1:length(file_names)){
+  x<-read.csv(paste0(folder_name,file_names[i]),header = FALSE)
+  assign(paste0(obj_name,i),x)
+}
+
+#Check to make sure length of this is correct:
+csvob<-rbind(csvob1,csvob2[-1,],csvob3[-1,],csvob4[-1,],csvob5[-1,],csvob6[-1,],csvob7[-1,])
+
+#csvob[,2]<-c("media",rep(media,times=nrow(csvob)-1))
+
+```
+
+*account for OD saturation:
+
+```{r echo=FALSE}
+
+nums<-csvob[-1,-1:-4]
+
+csvob2<-(0.622*nums*nums)+(0.77*nums)
+
+csvob3<-rbind(csvob[1,-1:-4],csvob2)
+csvob<-cbind(csvob[,1:4],csvob3)
+
+write.csv(csvob,paste0(folder_name,media,"_rawdatacollected_ODcorrected_",today,".csv"))
+
+```
+
+* Preliminary run of data to check for correct feature identification
+
+```{r eval=FALSE,echo=FALSE,width=120}
+#open grofit function, no overlay of plots so bad plots can be identified
+
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/no_overlay-gc_combined/grofit-combined-no_overlay.R')
+par(mfrow=c(1,1))
+gcdat<-gcfall_no(csvob)   #already run, do not need to do again
+
+```
+
+
+####observations:
+All plots look fine
+
+
+* apply version of 'gcfall' that merges ln=TRUE and ln=FALSE datasets
+
+###Growth Curve Plots:
+
+```{r echo=FALSE,results='hide',message=FALSE,width=120,warning=FALSE}
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/GrowthRateScripts_Dec2015/3_gcfall-media-lnmerge.R')
+
+gcdat2<-gcfall_mergeln(csvob)
+```
+
+**observations:**
+
+
+#### save data and combine technical replicates:
+```{r width=120}
+write.csv(gcdat2,paste0(folder_name,media,"-gcfit-",today,".csv"))
+
+# Combine technical replicates
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/average_triples_ingcobj.R')
+
+gcavg<-avg_triples(gcdat2,"DEF")
+
+write.csv(gcavg,paste0(folder_name,media,"-gcfit-repsavgd",today,".csv"))
+
+```
+
+
+### plot of GR paramaters
+
+```{r warning=FALSE,fig.width=11,fig.height=9}
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/gcf-tplot-by-strain.R')
+errort.bars(gcavg)
+
+```
+
+
+**lambda.spline:**
+
+Only MN does not have significantly lower lag than AM373
+
+**ln_mu.spline:**
+
+Looks interesting, but unfortunately, none of the variation is stat sig
+
+
+**A.spline:**
+
+All 3 double-mutants have sig lower maxOD than AM373 (and McpA, NhaK, and CssS)
+MN is sig lower than all strains
+    
+```{r width=120}
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/gcftukeyrun_rM.R')
+
+tuk_dat<-tukeyrun(gcavg,c(11,13:14))
+
+tuk_dat[,3:5]<-signif(tuk_dat[,3:5],digits = 3)
+
+print(tuk_dat[which(tuk_dat$pvals<0.05),])
+print(tuk_dat)
+```
+
+
+
