@@ -1,5 +1,5 @@
 ---
-title: GC analysis - template
+title: GC analysis - CssS set on acidic (pH5) LB
 author: "Kenyon"
 date: "December 22, 2015"
 output: html_document
@@ -10,6 +10,8 @@ output: html_document
 
 * Import files
 
+Printout of all .csv files containing the relevant growth curve data:
+
 ```{r echo=FALSE}
 source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/GrowthRateScripts_Dec2015/1_import_csvs.R')
 
@@ -17,7 +19,7 @@ folder_name<-"C:/Users/Kenyon/Documents/Bacillus_subtilis/Growth Rates/Eon data/
 file_names<-list.files(folder_name,pattern="*csv") #Fill me in
 file_names<-file_names[grep("20hrs",file_names)]
 media<-"LB_pH5"  #fill me in
-today<-"2016-02-10"
+today<-"2016-06-14"
 
 obj_name<-"csvob"
 
@@ -34,13 +36,13 @@ for (i in 1:length(file_names)){
 }
 
 #Check to make sure length of this is correct:
-csvob<-rbind(csvob1,csvob2[-1,],csvob3[-1,],csvob4[-1,],csvob5[-1,],csvob6[-1,],csvob7[-1,])
+csvob<-rbind(csvob1[,1:125],csvob2[-1,1:125],csvob3[-1,1:125],csvob4[-1,1:125],csvob5[-1,1:125],csvob6[-1,1:125],csvob7[-1,1:125])
 
 #csvob[,2]<-c("media",rep(media,times=nrow(csvob)-1))
 
 ```
 
-*account for OD saturation:
+* Correct for plate reader OD saturation:
 
 ```{r echo=FALSE}
 
@@ -68,23 +70,52 @@ gcdat<-gcfall_no(csvob)   #already run, do not need to do again
 
 
 ####observations:
-All plots look fine
+All plots appear fitted correctly
 
 
 * apply version of 'gcfall' that merges ln=TRUE and ln=FALSE datasets
 
-###Growth Curve Plots:
+###Growth Curve Plots:  
+
+(dashed line is ploted on each curve to highlight the position and slope of the identified max GR)  
 
 ```{r echo=FALSE,results='hide',message=FALSE,width=120,warning=FALSE}
-source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/GrowthRateScripts_Dec2015/3_gcfall-media-lnmerge.R')
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/GrowthRateScripts_Dec2015/3_gcfall-media-lnmerge_lnlag.R')
 
 gcdat2<-gcfall_mergeln(csvob)
 ```
 
-**observations:**
+Plots of each mutant strains (color) relative to AM373 (grey):
+    - there is one plot per well grown in these images, so 7 experiments x #technical replicates/experiments 
+
+```{r echo=FALSE,fig.height=12}
+
+par(mfrow=c(3,2))
+
+st.levs<-c("AM373","CssS","McpA","NhaK","CM","CN","MN")
+col.sel<-c("black","blue","red","orange","darkorchid","green4","deeppink","lawngreen","hotpink","darkslategrey","deeppink4")
+
+ymax<-round(max(csvob[-1,-c(1:5)])*1.1,digits=1)
+
+for(j in 2:7){
+  
+c1<-csvob[c(1,which(csvob[,3] %in% c("AM373",st.levs[j]))),]
+
+plot(as.numeric(c1[2,5:ncol(c1)])~as.numeric(c1[1,5:ncol(c1)]),type="l",
+     xlab="hours",ylab="OD(600nm)-well",col=ifelse(c1[2,3]=="AM373","gray44",
+     col.sel[j]),main=st.levs[j],ylim=c(0,ymax))
+
+for(i in 3:nrow(c1)){
+  lines(as.numeric(c1[1,5:ncol(c1)]),as.numeric(c1[i,5:ncol(c1)]),col=ifelse(c1[i,3]=="AM373","gray44",col.sel[j]))
+  
+}
+}
+```
 
 
 #### save data and combine technical replicates:
+
+Each experiment had 2-4 technical replicates in which the same strain was grown in multiple wells; this function calculates the average value of each feature found among the technical replicates.
 ```{r width=120}
 write.csv(gcdat2,paste0(folder_name,media,"-gcfit-",today,".csv"))
 
@@ -98,11 +129,56 @@ write.csv(gcavg,paste0(folder_name,media,"-gcfit-repsavgd",today,".csv"))
 ```
 
 
-### plot of GR paramaters
+### plot of GR paramaters  
+
+* ln_mu.spline :  max growth rate of ln-transformed data (doublings/hr)  
+* mu.spline: max growth rate, raw data (delta-OD/hr)  
+* lambda.spline:  lag time (hrs)  
+* A.spline: MaxOD of growth curve  (OD)  
+* integral.spline: integrated area under each growth curve  
+
 
 ```{r warning=FALSE,fig.width=11,fig.height=9}
-source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/gcf-tplot-by-strain.R')
+#source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/gcf-tplot-by-strain.R')
+
+gcavg$strain<-factor(gcavg$strain,levels=c("AM373","CssS","McpA","NhaK","CM","CN","MN"))
+
+source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/gcf-tplot-by-strain2.R')
 errort.bars(gcavg)
+
+```
+
+##Table of GR parameters
+
+avg: average of all replicates
+sd:  sd across replicates
+pval: results of paired t-test against AM373 reference strain values (no Mult Comp correction)
+sig: if <0.05, marked with "*"
+%AM373: percent differenc from AM373
+
+
+```{r echo=FALSE,results='asis'}
+
+library(knitr)
+for(i in 11:14){
+tab1<-tapply(gcavg[,i],gcavg$strain,mean)
+tab2<-tapply(gcavg[,i],gcavg$strain,sd)
+tab3<-tapply(gcavg[,i],gcavg$strain,function(x){
+  
+  t.test(x,gcavg[which(gcavg$strain=="AM373"),i],paired=TRUE)$p.val
+  
+})
+tab4<-ifelse(tab3<0.05,"*"," ")
+tab5<-(tab1-tab1[1])/tab1[1]
+tab<-rbind.data.frame(signif(tab1,digits=3),signif(tab2,digits=3),signif(tab3,digits=3),tab4,signif(tab5,digits=3))
+
+lab<-c("avg","sd","pval","sig","%AM373")
+lab2<-paste(unlist(strsplit(colnames(gcavg)[i],"[.]"))[1],lab)
+rownames(tab)<-lab2
+colnames(tab)<-names(tab1)
+
+print(kable(tab,format="markdown",digits=3))
+  }
 
 ```
 
@@ -121,6 +197,12 @@ Looks interesting, but unfortunately, none of the variation is stat sig
 All 3 double-mutants have sig lower maxOD than AM373 (and McpA, NhaK, and CssS)
 MN is sig lower than all strains
     
+### Tukey HSD analysis
+
+Identify pairs of strains that are significantly different from each other in each growth feature  
+
+Only pairs that are significantly different (p<0.05): 
+
 ```{r width=120}
 source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/gcftukeyrun_rM.R')
 
@@ -129,8 +211,11 @@ tuk_dat<-tukeyrun(gcavg,c(11,13:14))
 tuk_dat[,3:5]<-signif(tuk_dat[,3:5],digits = 3)
 
 print(tuk_dat[which(tuk_dat$pvals<0.05),])
-print(tuk_dat)
+
 ```
 
+All pairs:
 
-
+```{r width=120}
+print(tuk_dat)
+```

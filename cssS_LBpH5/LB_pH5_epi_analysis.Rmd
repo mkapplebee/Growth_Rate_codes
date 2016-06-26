@@ -1,260 +1,294 @@
 ---
-title: "LB-DSM-epi-analysis_walkthrough"
+title: "Epistasis analysis of CssS-recovered set in LB-pH5 media"
 author: "Kenyon"
-date: "January 11, 2016"
+date: "June 25, 2016"
 output: html_document
 ---
-##Describe dataset  
-
-CssS-7 set, grown for 20hrs in LB adjusted to pH 5.0 with HCl
-
-### 1. Location of gcfile with growth rate measurements
 
 
-```{r}
+### Describe dataset  
 
-dat_name<-"LB_pH5"
+Regenerated CssS strain set grown on LB acidified to pH5 with HCl
+
+Strain set consists of single-gene deletion strains:
+    * [AM373]: Reference strain; no deletions
+    * [cssS:](http://subtiwiki.uni-goettingen.de/bank/index.php?gene=cssS&action=Go) two-component sensor kinase that response to secretion stress   
+    * [mcpA:](http://subtiwiki.uni-goettingen.de/bank/index.php?gene=mcpA&action=Go) membrane-bound chemotaxis receptor  
+    * [nhaK:](http://subtiwiki.uni-goettingen.de/bank/index.php?gene=nhaK&action=Go) cation/H+ antiporter  
+
+Double-gene deletion strains:  
+    * CM : cssS/mcpA double KO strain  
+    * CN : cssS/nhaK KO  
+    * MN : mcpA/nhaK KO  
+
+### 1. Import growth rate measurement files
+
+
+```{r warning=FALSE,message=FALSE}
+
+#Import growth curve data file:
+gcfile<-read.csv("C:/Users/Kenyon/Documents/Bacillus_subtilis/Growth Rates/Eon data/LB+HCL-PH5/LB_pH5-gcfit-repsavgd2016-06-14.csv",row.names=1)
+gcfile<-gcfile[,-1]
+
+#text variables:
 media<-"LB_pH5"
 strain_order<-c("AM373","CssS","McpA","NhaK","CM","CN","MN")
 
-gcfile<-read.csv("C:/Users/Kenyon/Documents/Bacillus_subtilis/Growth Rates/Eon data/LB+HCL-PH5/LB_pH5-gcfit-repsavgd2016-02-10.csv")
+library(knitr)
+library(dplyr)
+library(tidyr)
 
-
-gcfile<-gcfile[,-1]
-#gcfile<-gcfile[-which(is.na(gcfile$strain)),]
 ```
 
 
-### 2. Create stacked version of data:
-Use "GRdata_collect_heirarch.R", which creates a stacked version of data  
 
-Header of stacked version of data:
-
+### 2. Reshape to create stacked version of data
+ 
 ```{r echo = FALSE, warning=FALSE,message=FALSE,width=120}
+#grab only needed columns
+meascol<-select(gcfile,plate,strain,ln_mu.spline,mu.spline,lambda.spline,A.spline,integral.spline)
 
-options(width = 120)
+stack<-gather(meascol,key=assay,value = measurement,ln_mu.spline,mu.spline,lambda.spline,A.spline,integral.spline )
 
-name<-function(gcfile, med){
-  library(dplyr)
-  gcfile<-select(gcfile,plate,strain,well,log.y,plate.row,plate.col,lambda.spline,ln_mu.spline,A.spline,integral.spline)
-  media<-rep(med,times=nrow(gcfile))
-  
-  gcfile<-cbind(media,gcfile)
-  
-  return(gcfile)
-}
+strcol<-spread(stack,key=strain,value=measurement)
 
-gc_named<-name(gcfile[,1:16],media)
-
-hstack<-function(gcdat){
-  
-  library(dplyr)
-  
-  st.names<-levels(gcdat$strain)
-  
-  x3<-NULL
-  
-  for (i in 1:length(st.names))
-  {
-    x1<-gcdat[gcdat$strain == st.names[i],]
-    
-    x1<-select(x1,media,strain,plate,well,lambda.spline,ln_mu.spline,A.spline,integral.spline)
-    
-    x2<-stack(x1[,5:8])
-    
-    x2<-cbind(x2,x1$plate,x1$media,x1$well)
-    colnames(x2)<-c(st.names[i],"assay","plate","media","well")
-    
-    x2<-x2[,c(2,4,3,5,1)]  # assay, media, plate, strain meas
-    
-    if(i==1){x3<-x2
-    }else {x3<-cbind(x3,x2[match(paste0(x3[,1],"_",x3[,2],"_",x3[,3]),paste0(x2[,1],"_",x2[,2],"_",x2[,3])),5])}
-    colnames(x3)[i+4]<-st.names[i]
-  }
-  
-  #x3<-x3[-which(is.na(x3$plate)),]
-  return(x3)
-}
-
-stack<-hstack(gc_named)
 ```
 
-### 3. Plot of pre-normalized measurements, using errort.bars function:
+### 3. Plots of raw measurements by strain:    
+    
+* red line indicates AM373 average in assay   
+* ln_mu.spline :  max growth rate of ln-transformed data (doublings/hr)  
+* mu.spline: max growth rate, raw data (delta-OD/hr)  
+* lambda.spline:  lag time (hrs)  
+* A.spline: MaxOD of growth curve  (OD)  
+* integral.spline: integrated area under each growth curve
 
 ```{r warning=FALSE,echo=FALSE,fig.height=8,fig.width=11}
 options(width = 120)
 
 errort.bars<-function(gcobj) {
-  par(mfrow=c(2,2))
+  layout(matrix(c(1,2,3,4,5,6), ncol=2, byrow=TRUE), heights=c(2,2,2))
   
   gcobj$strain<-droplevels(gcobj$strain)
   gcobj$strain<-factor(gcobj$strain,levels=strain_order,ordered=TRUE)
   gcobj<-gcobj[order(gcobj$strain,gcobj$plate),]
   
   source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/tplot.R')
-  for (i in 8:11) {
+  for (i in 3:7) {
     
 tplot(gcobj[,i] ~ gcobj$strain, data=gcobj, las=1, cex=1, cex.axis=1, bty='L', show.n=F, dist=.25, jit=.05,
-      type=c('db','db','db','db','db','db','db'),group.pch=T, pch= 6,
+      type=rep('db',times=length(levels(gcobj$strain))),group.pch=T, pch= rep(6,times=length(levels(gcobj$strain))),
       col=c(1:length(levels(gcobj$plate)))[gcobj$plate], boxcol=c('lightsteelblue1'),
       boxborder=grey(.8),boxplot.pars=list(notch=F, boxwex=.5),main=paste(media," - ",colnames(gcobj)[i])[1])   
     abline(h=mean(gcobj[which(gcobj$strain=="AM373"),i]),col="red")
-    }
-}
+  }
+  
+  par(mai=c(0.5,0.5,0.5,0.5))
+  frame()
+  legend(x="bottom",
+         legend=levels(gcobj$plate),pch=6,col=c(1:length(levels(gcobj$plate)))[gcobj$plate],
+         title="date grown")
+  
+  }
 
-errort.bars(gc_named)
+errort.bars(meascol)
 print("units on y-axis of figures:  lambda.spline (hrs), ln_mu.spline (ln(OD)/hr), A.spline (OD600), integral.spline (OD*hrs)")
 
 source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/gcftukeyrun_rM.R')
 
-tuk_data<-tukeyrun(gc_named,c(8:11))
+tuk_data<-tukeyrun(meascol,c(3:7))
 
 tuk_data[,3:5]<-signif(tuk_data[,3:5],digits = 3)
 
-print(tuk_data[which(tuk_data$pvals<0.1),])
+#print(tuk_data[which(tuk_data$pvals<0.1),])
 
 ```
 
-feature      description
-----------   ----------------------------------------------------
-Growth rate  
-Lag          
-A            
-
  
-### 4. Look for stat. sig. epistatic phenotypes
+### 4. Normalization
 
 
-#### a. Normalize data:
-  > 
-  
+#### a. Normalize data by experiment (plate) average
 
   
 ```{r echo=FALSE,warning=FALSE,fig.width=11,fig.height=9}
-options(width = 120)
-avg<-apply(stack[,-1:-4],1,mean)
-norm_dat<-cbind.data.frame(stack[,1:4],signif(stack[,-1:-4]/avg,4))
-norm_dat<-norm_dat[,c(1:5,8,9,11,6,7,10)]
-norm_dat$assay<-factor(norm_dat$assay,levels=c("lambda.spline","ln_mu.spline","A.spline","integral.spline"),ordered=TRUE)
+
+avg<-apply(strcol[,-1:-2],1,mean) #calculate row average
+norm_dat<-cbind.data.frame(strcol[,1:2],signif(strcol[,-1:-2]/avg,4))  #divide each measurement by its avg daily value across strains
+norm_dat<-norm_dat[,c(1,2,3,6,7,9,4,5,8)] #rearrange columns to get strains in order "A,C,M,N,CM,CN,MN"
+norm_dat$assay<-factor(norm_dat$assay,levels=c("lambda.spline","A.spline","ln_mu.spline","mu.spline", "integral.spline"),ordered=TRUE)
 
 ```
 
-#### b. Mean and sd of each assay level:
 
-average value of all replicates of each assay & strain:
+**average normalized values of each assay, by strain:**
 
 ```{r echo=FALSE,width=120,warning=FALSE}
 
 dat_mean<-NULL
 dat_sd<-NULL
 assay<-NULL
-media<-NULL
 num<-NULL
+power<-NULL
     
 levs<-levels(norm_dat$assay)
         
   for(i in 1:length(levs)){
     byassay<-norm_dat[which(norm_dat$assay==levs[i]),]  
           
-    ex_means<-colMeans(byassay[,-1:-4],na.rm=TRUE)                 #calculate column means
-    ex_sd<-apply(byassay[,-1:-4],2, function(x) sd(x,na.rm=TRUE))  #calculate column sds
+    ex_means<-colMeans(byassay[,-1:-2],na.rm=TRUE)                 #calculate column means
+    ex_sd<-apply(byassay[,-1:-2],2, function(x) sd(x,na.rm=TRUE))  #calculate column sds
           
     assay<-c(assay,as.character(byassay$assay[1]))
-    media<-c(media,as.character(byassay$media[1]))
     num<-c(num,dim(byassay)[1])
-          
+    
+    #power calculated using the average of the standard deviations across the strains
+    power1<-power.t.test(n=num[i],sd=mean(ex_sd),sig.level=0.05,power=0.8,type="two.sample")$delta
+    power<-signif(c(power,power1),digits=3)
+
     dat_mean<-rbind(dat_mean,ex_means)    #create mean table
     dat_sd<-rbind(dat_sd,ex_sd)         #create sd table
         }
 
-d_mean<-cbind.data.frame(assay,media,num,round(dat_mean,digits=3) ) #table of all means of all strains in all assays
-d_sd<-cbind.data.frame(assay,media,num,dat_sd)    #table of all sds of all strains of all assays
+d_mean<-cbind.data.frame(assay,num,round(dat_mean,digits=3)) #table of all means of all strains in all assays
+d_sd<-cbind.data.frame(assay,num,round(dat_sd,digits=3))    #table of all sds of all strains of all assays
 
-print(d_mean)
-
-```
-
-table of percent differences of each mutant strain from AM373:
-
-```{r echo=FALSE,width=120,warning=FALSE}
-prc_dif<-cbind(d_mean[,1:3],round((d_mean[,-1:-4]-d_mean$AM373)/d_mean$AM373,digits=3))
-
-prc_dif
+kable(cbind(d_mean,power))
 
 ```
 
-% st. dev. table:
+**%-differences of each strain from AM373:**
 
 ```{r echo=FALSE,width=120,warning=FALSE}
-prc_difsd<-cbind(d_sd[,1:3],round(d_sd[,-1:-4]/d_mean$AM373,digits=3))
-avg_sd<-round(rowMeans(d_sd[,-1:-4]/d_mean$AM373),digits=3)
+prc_dif<-cbind(d_mean[,1:2],round((d_mean[,-1:-3]-d_mean$AM373)/d_mean$AM373,digits=3))
+
+prc_difsd<-cbind(d_sd[,1:2],round(d_sd[,-1:-3]/d_mean$AM373,digits=3))
+
+avg_sd<-round(rowMeans(d_sd[,-1:-2]/d_mean$AM373),digits=3)
 prc_difsd<-cbind(prc_difsd,avg_sd)
 
-prc_difsd
+power<-signif(apply(prc_difsd,1,function(x){power.t.test(n=as.numeric(x[2]),sd=mean(as.numeric(x[3:8])),sig.level=0.05,power=0.8,type="paired")$delta}),digits=2)
+
+prc_difx<-cbind(prc_dif,avg_sd,power)
+kable(prc_difx)
 ```
 
+**%-differences, if above experiment-power:**
 
-Normalize all measurements by dividing each value by avg AM373 value for that assay:
+```{r echo=FALSE,width=120,warning=FALSE}
+#generate a table with only entries if greater than power level
+prc_table<-apply(prc_difx,1,function(x){
+  
+  y<-x[3:8]
+  
+  y[abs(as.numeric(y))<as.numeric(x[10])]<-NA
+  x[3:8]<-y
+  x[is.na(x)]<-as.character(" ")
+  return(x)
+})
+
+prc_table<-t(prc_table)
+
+kable(prc_table[,-9])
+
+
+```
+
+* power calculation is based on alpha=0.05, beta=0.2, paired measurements
+  
+
+#### b. Normalized all measurements by dividing each value by avg AM373 value for that measurement
+
+After normalization, a new parameter is also generated - euclidian distance across the growth rate features
+  `eucld_dist = sqrt((lambda.spline^2)+(A.spline^2)+(mu.spline^2)+(ln_mu.spline^2)+(integral.spline^2))`
+
+Estimated phenotype of the double mutants is also calculated at this stage, named "XX_est", and plotted in orange next to the measured phenotype of each double mutant (dark blue)  
+  
+The est-double mutant phenotype is the sum of the effects of the single mutants in each replicate experiment -  
+ie, `(sing1 - AM373) + (sing2 - AM373)`
+
+
 
 ```{r echo=FALSE,message=FALSE,warning=FALSE,fig.height=8,fig.width=11}
 
-nrm<-arrange(norm_dat,assay)
+nrm<-arrange(norm_dat,assay)  #need assays to be sorted in same order as in d_mean
 
-AMrep<-rep(d_mean$AM373,each=length(levels(gcfile$plate)))
-data<-apply(nrm[,5:11],2,function(x)(x-AMrep)/AMrep)
-
-nrma<-cbind.data.frame(nrm[,1:4],data)
-  
-#generate unstacked version to use for plotting
-
-library(tidyr)
-
-stck<-gather(nrma,key=strain,value=measurement,AM373,CssS,McpA,NhaK,CM,CN,MN)
-nrm2<-spread(stck,key=assay,value=measurement)
-nrm3<-nrm2[,c(4,2,1,3,5:8)]
-
-
-errort.bars2<-function(gcobj) {
-  par(mfrow=c(2,2))
-  
-  gcobj$strain<-droplevels(gcobj$strain)
-  gcobj$strain<-factor(gcobj$strain,levels=strain_order,ordered=TRUE)
-  gcobj<-gcobj[order(gcobj$strain,gcobj$plate),]
-  
-  source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/tplot.R')
-  for (i in 5:8) {
+Ameans<-tapply(norm_dat$AM373,norm_dat$assay,mean)
+AMrep<-rep(Ameans,each=length(levels(gcfile$plate)))
     
-tplot(as.numeric(gcobj[,i]) ~ gcobj$strain, data=gcobj, las=1, cex=1, cex.axis=1, bty='L', show.n=F, dist=.25, jit=.05,
-      type=c('db','db','db','db','db','db','db'),group.pch=T, pch= 6,
-      col=c(1:length(levels(gcobj$plate)))[gcobj$plate], boxcol=c('lightsteelblue1'),
-      boxborder=grey(.8),boxplot.pars=list(notch=F, boxwex=.5),main=colnames(gcobj)[i])
-     abline(h=0,col="red")}
-}
+#calculate distance between each rep and the avg_AM373 value (not the set's AM373 value)
+data<-apply(nrm[,3:9],2,function(x)(x-AMrep)/AMrep)
 
-errort.bars2(nrm3)
+nrma<-cbind.data.frame(nrm[,1:2],data)  # %change from avgAM373, columns are strains
+
+#change to assay-column format to calculate euclidian distance
+
+nrm_a1<-nrma %>% gather(key=strain,value=measurement,AM373,CssS,McpA,NhaK,CM,CN,MN) %>%
+  spread(key=assay,value=measurement) %>% 
+  mutate(eucld_dist = sqrt((lambda.spline^2)+(A.spline^2)+(mu.spline^2)+(ln_mu.spline^2)+(integral.spline^2)))
+
+#calculate estimated double-mutants here (additive model)
+nrm_s<- nrm_a1 %>% gather(key=assay,value=measurement,lambda.spline,A.spline,ln_mu.spline,mu.spline,integral.spline,eucld_dist) %>% 
+  spread(key=strain,value=measurement) %>%
+  mutate(CM_est = (CssS-AM373)+(McpA-AM373),
+       CN_est = (CssS-AM373)+(NhaK-AM373),
+       MN_est = (McpA-AM373)+(NhaK-AM373))
+  
+
+#generate unstacked version to use for plotting
+nrm_a<-nrm_s %>% gather(key=strain,value=measurement,AM373,CssS,McpA,NhaK,CM,CN,MN,CM_est,CN_est,MN_est) %>% spread(key=assay,value=measurement)
+
 
 ```
 
-#### c.  Calculate estimated value of double mutants from the single mutants, and whether the measure phenotypes of the double mutants are sig dif from that estimate
+```{r echo=FALSE,message=FALSE,warning=FALSE,fig.height=8,fig.width=11}
+errort.bars2<-function(gcobj) {
+  par(mfrow=c(3,2))
+  
+  gcobj$strain<-droplevels(gcobj$strain)
+  gcobj$strain<-factor(gcobj$strain,levels=c("AM373","CssS","McpA","NhaK","CM","CM_est","CN","CN_est","MN","MN_est"),ordered=TRUE)
+  gcobj<-gcobj[order(gcobj$strain,gcobj$plate),]
+  
+  source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/tplot.R')
+  for (i in 3:8) {
+    
+tplot(as.numeric(gcobj[,i]) ~ gcobj$strain, data=gcobj, las=1, cex=1, cex.axis=1, 
+      bty='L', show.n=F, dist=.25, jit=.05,
+      type=rep('db',times=length(levels(gcobj$strain))),group.pch=T, 
+      pch= rep(6,times=length(levels(gcobj$strain))),
+      col=c(1:length(levels(gcobj$plate)))[gcobj$plate], 
+      boxcol=c('azure3',rep('lightblue',times=3),rep(c('blue','coral'),times=3)),
+      boxborder=grey(.8),boxplot.pars=list(notch=F, boxwex=.5),main=colnames(gcobj)[i])
+     abline(h=0,col="red")
+     
+     }
+}
 
-Use function 'epi_func', not shown in report but provided in markdown file  
+errort.bars2(nrm_a)
+#write.csv(nrm3,"~/Bacillus_subtilis/Growth Rates/Eon data/LB+HCL-PH5/CsetREGEN_pH5_normalized.csv")
+
+```
+
+### 5. Identify Epistatic Interactions
+
+Calculate estimated value of double mutants from the single mutants, and whether the measure phenotypes of the double mutants are sig dif from that estimate 
+
+__Two Epistasis Calculation Methods:__
+
+__Linear Modeling Results:__ Identify epistasis using linear modeling to identify significant interaction effects
+    * in printed output, the double-mutant column (ie, "CM") is not the % dif from AM373-avg, but is the difference between double-mutant observed and double-estimated phenotype (ie, CM - CMest in the second table)  
+    
+ __Estimated Phenotype Calculation Results:__ Calcuate epistasis using t.test between observed and estimated double-mutant phenotype  
+
+
 
 ```{r echo=FALSE}
-epi_func<-function(hstack,sing1,sing2,dbl,type){ #provide hstack of one media condition, data normalized, and names of desired strains
+#input: norm_dat, which is normalized by plate average but not by AM373 yet, and has strains as columns
+
+epi_func<-function(df,sing1,sing2,dbl,dbl_est,media){ #provide hstack of one media condition, data normalized, and names of desired strains
   
-  mtab2<-hstack[,c("assay","media","AM373",sing1,sing2,dbl)]  #collects columns of desired strains
-  mtab2<-mtab2[which(complete.cases(mtab2)),]
-  
-  #calculate percent change from AM373
-  dat<-cbind.data.frame(mtab2[,1:2],(mtab2[,-1:-3]-mtab2$AM373)/mtab2$AM373)
-  
-  #estimate double-mutant value from single values:
-  if(type=="mult"){
-    dbl_est<-((1+dat[,3])*(1+dat[,4]))-1} else if(type=="add"){
-      dbl_est<-dat[,3]+dat[,4]}else{
-        print("epi_func var type not specified - either add or mult")}
-  
-  dat<-cbind(dat,dbl_est)
+  mtab2<-df[,c("assay","AM373",sing1,sing2,dbl,dbl_est)]  #collects columns of desired strains
+  dat<-mtab2[which(complete.cases(mtab2)),]
   
   res<-NULL
   
@@ -264,7 +298,7 @@ epi_func<-function(hstack,sing1,sing2,dbl,type){ #provide hstack of one media co
     w.pval<-wilcox.test(dat1[,5],dat1[,6],paired = TRUE)$p.value
     sig<-ifelse(pval<0.05|w.pval<0.05,"*","")
     
-    res1<-c(levels(dat$assay)[i],as.character(dat$media[1]),colMeans(dat1[,3:6]),pval,w.pval,sig)
+    res1<-c(levels(dat$assay)[i],media,colMeans(dat1[,3:6]),pval,w.pval,sig)
     res<-rbind(res,res1)
     
   }
@@ -272,7 +306,7 @@ epi_func<-function(hstack,sing1,sing2,dbl,type){ #provide hstack of one media co
   colnames(res)[8]<-"wil.test"
   
   colnames(res)[1:2]<-c("assay","media")
-  row.names(res)[1:4]<-1:4
+  row.names(res)[1:6]<-1:6
   
   res<-as.data.frame(res)
   
@@ -287,46 +321,148 @@ return(res2)
   }
 ```
 
+
+```{r echo=FALSE}
+
+
+errort.bars3<-function(gcobj,dbl_strain) {
+  par(mfrow=c(3,2))
+  
+  if(dbl_strain=="CM"){strains<-c("AM373","CssS","McpA","CM","CM_est")
+  }else if(dbl_strain=="CN"){strains<-c("AM373","CssS","NhaK","CN","CN_est")
+  }else if(dbl_strain=="MN"){strains<-c("AM373","McpA","NhaK","MN","MN_est")}
+  
+  gcobj2<-gcobj[which(gcobj$strain %in% strains),]
+  
+  gcobj2$strain<-droplevels(gcobj2$strain)
+  gcobj2$strain<-factor(gcobj2$strain,levels=strains,ordered=TRUE)
+  gcobj2<-gcobj2[order(gcobj2$strain,gcobj2$plate),]
+  
+  source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/tplot.R')
+  for (i in 3:ncol(gcobj2)) {
+    
+tplot(as.numeric(gcobj2[,i]) ~ gcobj2$strain, data=gcobj2, las=1, cex=1, cex.axis=1, bty='L', show.n=F, dist=.25, jit=.05,
+      type=rep('db',times=5),group.pch=T, pch= rep(6,times=length(levels(gcobj2$strain))),
+      col=c(1:length(levels(gcobj2$plate)))[gcobj2$plate], boxcol=c(rep('lightsteelblue1',times=3),'blue','coral'),
+      boxborder=grey(.8),boxplot.pars=list(notch=F, boxwex=.5),main=colnames(gcobj2)[i])
+     abline(h=0,col="red")}
+}
+
+```
+
+  
+
+```{r echo=FALSE,warning=FALSE}
+
+#linear modeling
+#create version of nrm_a without dbl_est values
+nrm3<-nrm_a[-which(grepl("_est",nrm_a$strain)),]
+
+#add strain factor columns - create nrm4
+cssS<-relevel(as.factor(ifelse(nrm3$strain %in% c("CssS","CM","CN"),"C","a")),ref="a")
+mcpA<-relevel(as.factor(ifelse(nrm3$strain %in% c("McpA","CM","MN"),"M","a")),ref="a")
+nhaK<-relevel(as.factor(ifelse(nrm3$strain %in% c("NhaK","CN","MN"),"N","a")),ref="a")
+
+nrm4<-cbind(nrm3[,1:2],cssS,mcpA,nhaK,nrm3[3:ncol(nrm3)])
+
+```
+
+
 ##CM:
 ```{r warning=FALSE,echo=FALSE,fig.height=8,fig.width=11,width=120}
 
-errort.bars2(nrm3[-which(nrm3$strain=="NhaK"|nrm3$strain=="CN"|nrm3$strain=="MN"),])
-epi_func(norm_dat,"CssS","McpA","CM",type="mult")
-epi_func(norm_dat,"CssS","McpA","CM",type="add")
+#select only rows specific to CM-contrast:
+cm_data<-nrm4[which(nrm4$strain %in% c("AM373","CssS","McpA","CM")),]
+
+#Run lm on all columns, select those with evidence of epistasis
+datl<-NULL
+epifnd<-NULL
+for(i in 6:ncol(cm_data)){
+  datl[[i]]<-summary(lm(cm_data[,i]~cm_data$cssS*cm_data$mcpA))
+  if(datl[[i]]$coefficients[4,4]<0.05)
+  {epifnd<-rbind(epifnd,c("col"=i, "meas"= colnames(cm_data)[i],                                          "AM373"=signif(datl[[i]]$coefficients[1,1],digits=2), 
+        "CssS"=signif(datl[[i]]$coefficients[2,1],digits=2), 
+        "McpA"=signif(datl[[i]]$coefficients[3,1],digits=2),
+        "CM"= signif(datl[[i]]$coefficients[4,1],digits=2),
+        "p-CMinter"=signif(datl[[i]]$coefficients[4,4],digits=2)))}
+  }
+
+errort.bars3(nrm_a,"CM")
+
+
+print("Linear Modeling Results:")
+epifnd<-as.data.frame(epifnd)
+if(nrow(epifnd)==0){print("No epistatic interactions found by lin mod for CM")}else{epifnd}
+
+print("Estimated Phenotype Calculation Results:")
+epi_func(nrm_s,"CssS","McpA","CM","CM_est",media)
+
 
 ```
 
-_Lag:_ All mutants have reduced lag (+fitness), but CM has less reduced lag than combined effects (negative epistasis).  
-CM(-13) is between fittness of C(-18%) and M(-12), but is closer to M-phenotype - but not technically distinct from either.
 
-_GR:_ No distinct phenotypes among strains
-
-_maxA:_ negative synergistic epistasis - C & M have no distinct effect, while CM is distinctly reduced from C,M, and AM373
 
 ##CN:
-```{r warning=FALSE, echo=FALSE,fig.height=8,fig.width=11,width=120}
-options(width = 120)
-errort.bars2(nrm3[-which(nrm3$strain=="McpA"|nrm3$strain=="CM"|nrm3$strain=="MN"),])
-epi_func(norm_dat,"CssS","NhaK","CN",type="mult")
-epi_func(norm_dat,"CssS","NhaK","CN",type="add")
+```{r warning=FALSE,echo=FALSE,fig.height=8,fig.width=11,width=120}
+
+#select only rows specific to CM-contrast:
+cn_data<-nrm4[which(nrm4$strain %in% c("AM373","CssS","NhaK","CN")),]
+
+#Run lm on all columns, select those with evidence of epistasis
+datl<-NULL
+epifnd<-NULL
+for(i in 6:ncol(cn_data)){
+  datl[[i]]<-summary(lm(cn_data[,i]~cn_data$cssS*cn_data$nhaK))
+  if(datl[[i]]$coefficients[4,4]<0.05)
+  {epifnd<-rbind(epifnd,c("col"=i, "meas"= colnames(cn_data)[i],                                          "AM373"=signif(datl[[i]]$coefficients[1,1],digits=2), 
+        "CssS"=signif(datl[[i]]$coefficients[2,1],digits=2), 
+        "NhaK"=signif(datl[[i]]$coefficients[3,1],digits=2),
+        "CN"= signif(datl[[i]]$coefficients[4,1],digits=2),
+        "p-CNinter"=signif(datl[[i]]$coefficients[4,4],digits=2)))}
+  }
+
+errort.bars3(nrm_a,"CN")
+
+epifnd<-as.data.frame(epifnd)
+if(nrow(epifnd)==0){print("No epistatic interactions found by lin mod for CN")}else{epifnd}
+
+epi_func(nrm_s,"CssS","NhaK","CN","CN_est",media)
+
 ```
 
-_Lag:_
-
-_GR:_ 
-
-_maxA:_ 
 
 ##MN:
-```{r warning=FALSE, echo=FALSE,fig.height=8,fig.width=11,width=120}
-options(width = 120)
-errort.bars2(nrm3[-which(nrm3$strain=="CssS"|nrm3$strain=="CM"|nrm3$strain=="CN"),])
-epi_func(norm_dat,"McpA","NhaK","MN",type="mult")
-epi_func(norm_dat,"McpA","NhaK","MN",type="add")
+```{r warning=FALSE,echo=FALSE,fig.height=8,fig.width=11,width=120}
+
+#select only rows specific to CM-contrast:
+mn_data<-nrm4[which(nrm4$strain %in% c("AM373","McpA","NhaK","MN")),]
+
+#Run lm on all columns, select those with evidence of epistasis
+datl<-NULL
+epifnd<-NULL
+for(i in 6:ncol(mn_data)){
+  datl[[i]]<-summary(lm(mn_data[,i]~mn_data$mcpA*mn_data$nhaK))
+  if(datl[[i]]$coefficients[4,4]<0.05)
+  {epifnd<-rbind(epifnd,c("col"=i, "meas"= colnames(mn_data)[i],                                          "AM373"=signif(datl[[i]]$coefficients[1,1],digits=2), 
+        "McpA"=signif(datl[[i]]$coefficients[2,1],digits=2), 
+        "NhaK"=signif(datl[[i]]$coefficients[3,1],digits=2),
+        "MN"= signif(datl[[i]]$coefficients[4,1],digits=2),
+        "p-MNinter"=signif(datl[[i]]$coefficients[4,4],digits=2)))}
+  }
+
+
+  
+errort.bars3(nrm_a,"MN")
+
+epifnd<-as.data.frame(epifnd)
+if(nrow(epifnd)==0){print("No epistatic interactions found by lin mod for MN")}else{epifnd}
+
+
+epi_func(nrm_s,"McpA","NhaK","MN","MN_est",media)
+
 ```
 
-_Lag:_
 
-_GR:_ 
+###Summary:
 
-_maxA:_ 
+Significant evidence of epistasis found in all three double-mutants, across multiple growth curve parameters.  Only parameter without apparent epistasis in any strain is ln_mu.spline (max GR in ln-transformed growth curve)
