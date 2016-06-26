@@ -8,7 +8,25 @@ output: html_document
 
 #### CssS-7 strain set grown on LB adjusted to pH5 for 20 hours;  7 replicates grown
 
-* Import files
+Regenerated CssS strain set grown on LB acidified to pH5 with HCl
+
+**Description of Strains:**  
+
+Strain set consists of single-gene deletion strains:  
+     
+* AM373: Reference strain; no deletions  
+* [cssS:](http://subtiwiki.uni-goettingen.de/bank/index.php?gene=cssS&action=Go) two-component sensor kinase gene that response to secretion stress deleted    
+* [mcpA:](http://subtiwiki.uni-goettingen.de/bank/index.php?gene=mcpA&action=Go) membrane-bound chemotaxis receptor gene deleted  
+* [nhaK:](http://subtiwiki.uni-goettingen.de/bank/index.php?gene=nhaK&action=Go) cation/H+ antiporter gene deleted    
+
+Double-gene deletion strains:  
+    
+* CM : cssS/mcpA double KO strain  
+* CN : cssS/nhaK KO  
+* MN : mcpA/nhaK KO  
+
+
+####Step 1 - Import files
 
 Printout of all .csv files containing the relevant growth curve data:
 
@@ -27,7 +45,7 @@ file_names
 
 ```
 
-* Merge individual '.csv' files into one:
+Step 1.b - Merge individual '.csv' files into one
 
 ```{r echo=FALSE}
 for (i in 1:length(file_names)){
@@ -42,7 +60,7 @@ csvob<-rbind(csvob1[,1:125],csvob2[-1,1:125],csvob3[-1,1:125],csvob4[-1,1:125],c
 
 ```
 
-* Correct for plate reader OD saturation:
+####Step 2: Correct for plate reader OD saturation
 
 ```{r echo=FALSE}
 
@@ -57,7 +75,7 @@ write.csv(csvob,paste0(folder_name,media,"_rawdatacollected_ODcorrected_",today,
 
 ```
 
-* Preliminary run of data to check for correct feature identification
+####Step 3: Preliminary run of data to check for correct feature identification
 
 ```{r eval=FALSE,echo=FALSE,width=120}
 #open grofit function, no overlay of plots so bad plots can be identified
@@ -69,11 +87,10 @@ gcdat<-gcfall_no(csvob)   #already run, do not need to do again
 ```
 
 
-####observations:
-All plots appear fitted correctly
+observations:  All plots appear fitted correctly
 
 
-* apply version of 'gcfall' that merges ln=TRUE and ln=FALSE datasets
+####Step 4: Apply version of 'gcfall' that merges ln=TRUE and ln=FALSE datasets
 
 ###Growth Curve Plots:  
 
@@ -85,7 +102,7 @@ source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/GrowthRateScripts_De
 gcdat2<-gcfall_mergeln(csvob)
 ```
 
-Plots of each mutant strains (color) relative to AM373 (grey):
+Plots of each mutant strains (color) relative to AM373 (grey):  
     - there is one plot per well grown in these images, so 7 experiments x #technical replicates/experiments 
 
 ```{r echo=FALSE,fig.height=12}
@@ -113,7 +130,7 @@ for(i in 3:nrow(c1)){
 ```
 
 
-#### save data and combine technical replicates:
+####Step 5: save data and combine technical replicates:
 
 Each experiment had 2-4 technical replicates in which the same strain was grown in multiple wells; this function calculates the average value of each feature found among the technical replicates.
 ```{r width=120}
@@ -124,12 +141,12 @@ source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015
 
 gcavg<-avg_triples(gcdat2,"DEF")
 
-write.csv(gcavg,paste0(folder_name,media,"-gcfit-repsavgd",today,".csv"))
+#write.csv(gcavg,paste0(folder_name,media,"-gcfit-repsavgd",today,".csv"))
 
 ```
 
 
-### plot of GR paramaters  
+### Plots of GR paramaters by strain
 
 * ln_mu.spline :  max growth rate of ln-transformed data (doublings/hr)  
 * mu.spline: max growth rate, raw data (delta-OD/hr)  
@@ -138,7 +155,7 @@ write.csv(gcavg,paste0(folder_name,media,"-gcfit-repsavgd",today,".csv"))
 * integral.spline: integrated area under each growth curve  
 
 
-```{r warning=FALSE,fig.width=11,fig.height=9}
+```{r warning=FALSE,fig.width=11,fig.height=9,echo=FALSE}
 #source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/gcf-tplot-by-strain.R')
 
 gcavg$strain<-factor(gcavg$strain,levels=c("AM373","CssS","McpA","NhaK","CM","CN","MN"))
@@ -148,16 +165,16 @@ errort.bars(gcavg)
 
 ```
 
-##Table of GR parameters
+##Tables of GR parameters
 
-avg: average of all replicates
-sd:  sd across replicates
-pval: results of paired t-test against AM373 reference strain values (no Mult Comp correction)
-sig: if <0.05, marked with "*"
-%AM373: percent differenc from AM373
+avg: average of all replicates  
+sd:  sd across replicates  
+pval: results of paired t-test against AM373 reference strain values (no Mult Comp correction)  
+sig: if <0.05, marked with "*"  
+%AM373: percent differenc from AM373  
 
 
-```{r echo=FALSE,results='asis'}
+```{r echo=FALSE,results='asis',warning=FALSE}
 
 library(knitr)
 for(i in 11:14){
@@ -203,7 +220,7 @@ Identify pairs of strains that are significantly different from each other in ea
 
 Only pairs that are significantly different (p<0.05): 
 
-```{r width=120}
+```{r width=120, echo=FALSE}
 source('~/Bacillus_subtilis/Growth Rates/growth-curves-ryan/LM_controls-Sept2015/gcftukeyrun_rM.R')
 
 tuk_dat<-tukeyrun(gcavg,c(11,13:14))

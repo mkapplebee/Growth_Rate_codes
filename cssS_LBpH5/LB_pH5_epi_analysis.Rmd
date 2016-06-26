@@ -10,16 +10,18 @@ output: html_document
 
 Regenerated CssS strain set grown on LB acidified to pH5 with HCl
 
-Strain set consists of single-gene deletion strains:
-    * [AM373]: Reference strain; no deletions
-    * [cssS:](http://subtiwiki.uni-goettingen.de/bank/index.php?gene=cssS&action=Go) two-component sensor kinase that response to secretion stress   
-    * [mcpA:](http://subtiwiki.uni-goettingen.de/bank/index.php?gene=mcpA&action=Go) membrane-bound chemotaxis receptor  
-    * [nhaK:](http://subtiwiki.uni-goettingen.de/bank/index.php?gene=nhaK&action=Go) cation/H+ antiporter  
+Strain set consists of single-gene deletion strains:  
+     
+* AM373: Reference strain; no deletions  
+* [cssS:](http://subtiwiki.uni-goettingen.de/bank/index.php?gene=cssS&action=Go) two-component sensor kinase gene that response to secretion stress deleted    
+* [mcpA:](http://subtiwiki.uni-goettingen.de/bank/index.php?gene=mcpA&action=Go) membrane-bound chemotaxis receptor gene deleted  
+* [nhaK:](http://subtiwiki.uni-goettingen.de/bank/index.php?gene=nhaK&action=Go) cation/H+ antiporter gene deleted  
 
 Double-gene deletion strains:  
-    * CM : cssS/mcpA double KO strain  
-    * CN : cssS/nhaK KO  
-    * MN : mcpA/nhaK KO  
+    
+* CM : cssS/mcpA double KO strain  
+* CN : cssS/nhaK KO  
+* MN : mcpA/nhaK KO  
 
 ### 1. Import growth rate measurement files
 
@@ -56,7 +58,7 @@ strcol<-spread(stack,key=strain,value=measurement)
 
 ### 3. Plots of raw measurements by strain:    
     
-* red line indicates AM373 average in assay   
+* red line indicates AM373-average in assay   
 * ln_mu.spline :  max growth rate of ln-transformed data (doublings/hr)  
 * mu.spline: max growth rate, raw data (delta-OD/hr)  
 * lambda.spline:  lag time (hrs)  
@@ -272,6 +274,8 @@ errort.bars2(nrm_a)
 ### 5. Identify Epistatic Interactions
 
 Calculate estimated value of double mutants from the single mutants, and whether the measure phenotypes of the double mutants are sig dif from that estimate 
+
+In the t-box plots, looking for features in which the measured double-mutant phenotype (dark blue) is well-separated from the estimated phenotype (orange)
 
 __Two Epistasis Calculation Methods:__
 

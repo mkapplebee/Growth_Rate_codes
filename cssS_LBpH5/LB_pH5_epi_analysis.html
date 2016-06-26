@@ -71,8 +71,19 @@ img {
 <div id="describe-dataset" class="section level3">
 <h3>Describe dataset</h3>
 <p>Regenerated CssS strain set grown on LB acidified to pH5 with HCl</p>
-<p>Strain set consists of single-gene deletion strains: * [AM373]: Reference strain; no deletions * <a href="http://subtiwiki.uni-goettingen.de/bank/index.php?gene=cssS&amp;action=Go">cssS:</a> two-component sensor kinase that response to secretion stress<br /> * <a href="http://subtiwiki.uni-goettingen.de/bank/index.php?gene=mcpA&amp;action=Go">mcpA:</a> membrane-bound chemotaxis receptor<br /> * <a href="http://subtiwiki.uni-goettingen.de/bank/index.php?gene=nhaK&amp;action=Go">nhaK:</a> cation/H+ antiporter</p>
-<p>Double-gene deletion strains:<br /> * CM : cssS/mcpA double KO strain<br /> * CN : cssS/nhaK KO<br /> * MN : mcpA/nhaK KO</p>
+<p>Strain set consists of single-gene deletion strains:</p>
+<ul>
+<li>AM373: Reference strain; no deletions<br /></li>
+<li><a href="http://subtiwiki.uni-goettingen.de/bank/index.php?gene=cssS&amp;action=Go">cssS:</a> two-component sensor kinase gene that response to secretion stress deleted<br /></li>
+<li><a href="http://subtiwiki.uni-goettingen.de/bank/index.php?gene=mcpA&amp;action=Go">mcpA:</a> membrane-bound chemotaxis receptor gene deleted<br /></li>
+<li><a href="http://subtiwiki.uni-goettingen.de/bank/index.php?gene=nhaK&amp;action=Go">nhaK:</a> cation/H+ antiporter gene deleted</li>
+</ul>
+<p>Double-gene deletion strains:</p>
+<ul>
+<li>CM : cssS/mcpA double KO strain<br /></li>
+<li>CN : cssS/nhaK KO<br /></li>
+<li>MN : mcpA/nhaK KO</li>
+</ul>
 </div>
 <div id="import-growth-rate-measurement-files" class="section level3">
 <h3>1. Import growth rate measurement files</h3>
@@ -94,7 +105,7 @@ library(tidyr)</code></pre>
 <div id="plots-of-raw-measurements-by-strain" class="section level3">
 <h3>3. Plots of raw measurements by strain:</h3>
 <ul>
-<li>red line indicates AM373 average in assay<br /></li>
+<li>red line indicates AM373-average in assay<br /></li>
 <li>ln_mu.spline : max growth rate of ln-transformed data (doublings/hr)<br /></li>
 <li>mu.spline: max growth rate, raw data (delta-OD/hr)<br /></li>
 <li>lambda.spline: lag time (hrs)<br /></li>
@@ -354,6 +365,7 @@ library(tidyr)</code></pre>
 <div id="identify-epistatic-interactions" class="section level3">
 <h3>5. Identify Epistatic Interactions</h3>
 <p>Calculate estimated value of double mutants from the single mutants, and whether the measure phenotypes of the double mutants are sig dif from that estimate</p>
+<p>In the t-box plots, looking for features in which the measured double-mutant phenotype (dark blue) is well-separated from the estimated phenotype (orange)</p>
 <p><strong>Two Epistasis Calculation Methods:</strong></p>
 <p><strong>Linear Modeling Results:</strong> Identify epistasis using linear modeling to identify significant interaction effects * in printed output, the double-mutant column (ie, “CM”) is not the % dif from AM373-avg, but is the difference between double-mutant observed and double-estimated phenotype (ie, CM - CMest in the second table)</p>
 <p><strong>Estimated Phenotype Calculation Results:</strong> Calcuate epistasis using t.test between observed and estimated double-mutant phenotype</p>
