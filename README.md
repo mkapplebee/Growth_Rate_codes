@@ -2,8 +2,6 @@
 
 These folders contain various scripts I have written to analyze growth-rate data measured from 96-well plates
 
-**Folders:**
-
 **1_gc_analysis_scripts**:  scripts to analyze growth curves ('gc')
 
 **2_epi_analysis_scripts**:  scripts written to analyze growth curve features for epistatic interactions
