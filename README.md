@@ -14,8 +14,5 @@ Since GitHub does not render html files automatically, here are links to rendere
 
 ###Example Html files:
 
-[LB Growth Curve Analysis](http://htmlpreview.github.io/?https://github.com/mkapplebee/Growth_Rate_codes/blob/master/cssS_LB_DSM/cssS-LB-GR-data_analysis_2016-02-01.html)    
-[LB Epistasis Analysis](http://htmlpreview.github.io/?https://github.com/mkapplebee/Growth_Rate_codes/blob/master/cssS_LB_DSM/CssS-LB-epi_analysis-2016-01-11.html)
-
 [LB_pH5 Growth Curve Analysis](http://htmlpreview.github.io/?https://github.com/mkapplebee/Growth_Rate_codes/blob/master/cssS_LBpH5/LB_pH5_gc_analysis.html)    
 [LB_pH5 Epistasis Analysis](http://htmlpreview.github.io/?https://github.com/mkapplebee/Growth_Rate_codes/blob/master/cssS_LBpH5/LB_pH5_epi_analysis.html)
