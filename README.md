@@ -2,8 +2,8 @@
 
 These folders contain various scripts I have written to analyze growth-rate data measured from 96-well plates
 
-**1_gc_analysis_scripts**:  scripts to analyze growth curves ('gc')
+Analysis is currently done primarily through R-markdown files "gc_analysis-template.Rmd" and "epi_analysis-template.Rmd", by editing them to import the appropriate data and the rest of the file encodes the processing steps and has room for experiment-specific notes and observations.  
 
-**2_epi_analysis_scripts**:  scripts written to analyze growth curve features for epistatic interactions
+Folders 1_gc_analysis_scripts / 2_epi_analysis_scripts hold .R files that mostly hold functions that the .Rmd files call
 
-**cssS_X_X**:  experimental data of a cssS-gene deletion strain set in the given growth condition (growth on LB, DSM, acidified (pH5) LB, or LB + 0.008% Triton-X
+Folders "cssS_X_X" hold examples of experimental data that have been processed using these scripts.  'cssS' denotes the growth rates are of a set of strains that include the cssS-deletion strain, grown in LB media, DSM, acidified LB (pH5), or LB + 0.008% Triton-X detergent.
